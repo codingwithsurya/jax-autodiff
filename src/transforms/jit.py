@@ -10,17 +10,20 @@ from ..core.tracer import Node, constant, trace
 from ..metal.metal_ops import get_device, to_tensor
 
 class CachedGraph:
-    """Represents a cached computation graph for reuse."""
-    def __init__(self, output_node: Node, input_nodes: List[Node]):
-        self.output_node = output_node
+    """A cached computation graph that can be reused with different input values."""
+    
+    def __init__(self, output: Node, input_nodes: List[Node]):
+        self.output = output
         self.input_nodes = input_nodes
-        self.compiled_fn = None
         
     def __call__(self, *args):
-        # Update input values
+        # Update input node values
         for node, arg in zip(self.input_nodes, args):
-            node.value = arg
-        return trace(self.output_node)
+            if isinstance(arg, Node):
+                node.value = arg.value
+            else:
+                node.value = arg
+        return trace(self.output)
 
 class jit(Transform):
     """
@@ -44,56 +47,22 @@ class jit(Transform):
         
     def transform(self, fn: Callable) -> Callable:
         def wrapped(*args, **kwargs):
-            # Create a cache key based on input types
+            # Use a cache key that’s based on argument types (or ideally, shapes)
             cache_key = tuple(type(arg) for arg in args)
-            
             if cache_key not in self.cache:
-                # First call: build and cache the computation graph
                 traced_args = []
+                input_nodes: List[Node] = []
                 for arg in args:
                     if isinstance(arg, Node):
                         traced_args.append(arg)
+                        input_nodes.append(arg)
                     else:
-                        traced_args.append(constant(arg))
-                        
+                        node = constant(arg)
+                        traced_args.append(node)
+                        input_nodes.append(node)
                 output = fn(*traced_args, **kwargs)
-                self.cache[cache_key] = lambda *args: output
-                
-            # Use the cached graph
+                self.cache[cache_key] = CachedGraph(output, input_nodes)
+            # The cached graph will update its input node values on each call.
             result = self.cache[cache_key](*args)
-            
-            # If the result is a Node, evaluate it
-            if isinstance(result, Node):
-                return trace(result)
             return result
-            
         return wrapped
-
-class CachedGraph:
-    """Represents a cached computation graph for reuse."""
-    def __init__(self, output_node: Node, input_nodes: List[Node]):
-        self.output_node = output_node
-        self.input_nodes = input_nodes
-        self.compiled_fn = None
-        
-    def __call__(self, *args):
-        # Update input values
-        for node, arg in zip(self.input_nodes, args):
-            node.value = arg
-        return trace(self.output_node)
-
-    def _make_cache_key(self, args, kwargs) -> str:
-        """Create a cache key based on input shapes and types."""
-        key_parts = []
-        for arg in args:
-            if isinstance(arg, (int, float)):
-                key_parts.append(f"scalar_{type(arg).__name__}")
-            elif isinstance(arg, torch.Tensor):
-                key_parts.append(f"tensor_{list(arg.shape)}_{arg.dtype}")
-            else:
-                key_parts.append(f"other_{type(arg).__name__}")
-        
-        for k, v in sorted(kwargs.items()):
-            key_parts.append(f"{k}_{type(v).__name__}")
-            
-        return "_".join(key_parts)

@@ -1,0 +1,4 @@
+torch>=2.1.0  # For Metal acceleration
+numpy>=1.24.0
+graphviz>=0.20.1  # For graph visualization
+pytest>=7.0.0  # For testing

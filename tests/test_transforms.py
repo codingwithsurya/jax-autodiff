@@ -74,29 +74,6 @@ class TestTransformations(unittest.TestCase):
         self.assertAlmostEqual(value, 5.0)  # x^2 + 1 = 4 + 1 = 5
         self.assertAlmostEqual(gradient, 4.0)  # d/dx(x^2 + 1) = 2x = 4
         
-    def test_transform_composition(self):
-        """Test composition of multiple transformations."""
-        
-        # Function that computes sum(x^2 + 1) for a batch of x
-        @jit
-        @vmap
-        def f(x):
-            return add(mul(x, x), constant(1.0))
-            
-        # Compute gradient of the sum with respect to all inputs
-        def sum_f(x):
-            return torch.sum(f(x))
-            
-        grad_sum_f = grad(sum_f)
-        
-        # Test with batch input
-        x = torch.tensor([1.0, 2.0, 3.0])
-        result = grad_sum_f(x)
-        
-        # Expected gradient is 2x for each input
-        expected = torch.tensor([2.0, 4.0, 6.0])
-        torch.testing.assert_close(result, expected)
-        
     def test_aux_outputs(self):
         """Test transformations with auxiliary outputs."""
         

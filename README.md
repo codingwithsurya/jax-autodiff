@@ -20,11 +20,69 @@ A JAX-inspired automatic differentiation compiler that implements key JAX featur
 - **Automatic Differentiation**: Reverse-mode autodiff with efficient gradient computation
 - **Operation Fusion**: Identify and combine operations for better performance
 
-## Installation
+## Getting Started
+
+### Prerequisites
+- Python 3.8 or higher
+- pip (Python package installer)
+
+### Installation
+
+There are two ways to install the package:
+
+#### 1. Development Installation (Recommended)
+This method is recommended if you want to modify the code or run examples:
 
 ```bash
-pip install -r requirements.txt
+# Clone the repository
+git clone https://github.com/codingwithsurya/jax-autodiff.git
+cd jax-autodiff
+
+# Install in development mode
+pip install -e .
 ```
+
+#### 2. Regular Installation
+If you just want to use the package:
+
+```bash
+pip install git+https://github.com/codingwithsurya/jax-autodiff.git
+```
+
+### Running Examples
+After installation, you can run any example directly:
+
+```bash
+# Run complex autodiff example
+python3 examples/complex_autodiff.py
+
+# Run other examples
+python3 examples/your_example.py
+```
+
+### Running Tests
+The project includes a comprehensive test suite that verifies all core functionality:
+
+```bash
+# Install test dependencies first
+pip install -e ".[dev]"
+
+# Run all tests
+pytest tests/
+
+# Run specific test files
+pytest tests/test_autodiff.py
+pytest tests/test_compiler.py
+pytest tests/test_transforms.py
+
+# Run tests with verbose output
+pytest -v tests/
+```
+
+The test suite covers:
+- Automatic differentiation (`test_autodiff.py`)
+- Compiler functionality (`test_compiler.py`)
+- Function transformations (`test_transforms.py`)
 
 ## Usage Examples
 

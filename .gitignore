@@ -1,14 +1,26 @@
-# Python
+# Python cache files
 __pycache__/
 *.py[cod]
-*.so
-build/
-dist/
-*.egg-info/
-
-# Testing
+*$py.class
 .pytest_cache/
-.coverage
+*/__pycache__/
+**/__pycache__/
 
-# macOS
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Virtual environment
+venv/
+env/
+.env/
+.venv/
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
 .DS_Store

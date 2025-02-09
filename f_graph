@@ -1,0 +1,18 @@
+// Computation Graph
+digraph {
+	rankdir=TB
+	"c62f38aa-8901-42d6-9f12-5c59f4402c8b" [label="add
+grad=3.875"]
+	"d0357a34-d829-446e-9e07-1967efe24a2b" [label="mul
+grad=3.875"]
+	"277288ae-14aa-4e94-b759-bc4f2a94bdf3" [label="const
+value=2.0
+grad=35.5"]
+	"277288ae-14aa-4e94-b759-bc4f2a94bdf3" -> "d0357a34-d829-446e-9e07-1967efe24a2b"
+	"277288ae-14aa-4e94-b759-bc4f2a94bdf3" -> "d0357a34-d829-446e-9e07-1967efe24a2b"
+	"d0357a34-d829-446e-9e07-1967efe24a2b" -> "c62f38aa-8901-42d6-9f12-5c59f4402c8b"
+	"f927f9b0-022e-4e64-876e-f9aceb9692de" [label="const
+value=1.0
+grad=3.875"]
+	"f927f9b0-022e-4e64-876e-f9aceb9692de" -> "c62f38aa-8901-42d6-9f12-5c59f4402c8b"
+}

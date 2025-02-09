@@ -34,66 +34,79 @@ def topological_sort(node: Node) -> List[Node]:
 def compute_gradients(node: Node, seed_grad: float = 1.0):
     """
     Compute gradients through the computation graph using reverse-mode autodiff.
+    (Fixed: resets all node gradients and adds a branch for division.)
     
     Args:
         node (Node): The output node to compute gradients from.
         seed_grad (float): Initial gradient value for the output node.
     """
-    # Initialize gradients with proper type
+    # Get nodes in topological order.
+    sorted_nodes = topological_sort(node)
+    
+    # Reset gradients for all nodes (this prevents accumulation from prior calls)
+    for n in sorted_nodes:
+        if isinstance(n.value, torch.Tensor):
+            n.grad = torch.zeros_like(n.value)
+        else:
+            n.grad = 0.0
+
+    # Set the output node's gradient to the seed value.
     if isinstance(node.value, torch.Tensor):
         node.grad = torch.ones_like(node.value) * seed_grad
     else:
         node.grad = seed_grad
     
-    # Topological sort for reverse-mode autodiff
-    sorted_nodes = topological_sort(node)
-    
-    # Initialize gradients for all nodes
-    for n in sorted_nodes:
-        if n.grad is None:
-            if isinstance(n.value, torch.Tensor):
-                n.grad = torch.zeros_like(n.value)
-            else:
-                n.grad = 0.0
-    
-    # Reverse-mode autodiff
-    for node in reversed(sorted_nodes):
-        if node.op == "add":
-            # d(a + b)/da = d(a + b)/db = 1
-            for inp in node.inputs:
-                if isinstance(inp.grad, torch.Tensor) or isinstance(node.grad, torch.Tensor):
-                    inp.grad = inp.grad + node.grad if isinstance(inp.grad, torch.Tensor) else torch.tensor(inp.grad) + node.grad
+    # Reverse-mode autodiff: process nodes in reverse topological order.
+    for n in reversed(sorted_nodes):
+        if n.op == "add":
+            # For addition, d(a+b)/da = d(a+b)/db = 1.
+            for inp in n.inputs:
+                if isinstance(inp.grad, torch.Tensor) or isinstance(n.grad, torch.Tensor):
+                    inp.grad = inp.grad + n.grad if isinstance(inp.grad, torch.Tensor) else torch.tensor(inp.grad) + n.grad
                 else:
-                    inp.grad += node.grad
-        elif node.op == "mul":
-            # d(a * b)/da = b, d(a * b)/db = a
-            a, b = node.inputs
+                    inp.grad += n.grad
+        elif n.op == "mul":
+            # For multiplication, if z = a * b then:
+            # dz/da = b and dz/db = a.
+            a, b = n.inputs
             a_val = a.value if a.value is not None else evaluate(a)
             b_val = b.value if b.value is not None else evaluate(b)
-            
-            # Convert to tensors if needed
-            if isinstance(node.grad, torch.Tensor) or isinstance(a_val, torch.Tensor) or isinstance(b_val, torch.Tensor):
+            if isinstance(n.grad, torch.Tensor) or isinstance(a_val, torch.Tensor) or isinstance(b_val, torch.Tensor):
                 if not isinstance(a_val, torch.Tensor):
                     a_val = torch.tensor(a_val)
                 if not isinstance(b_val, torch.Tensor):
                     b_val = torch.tensor(b_val)
-                if not isinstance(node.grad, torch.Tensor):
-                    node_grad = torch.tensor(node.grad)
-                else:
-                    node_grad = node.grad
-                
+                node_grad = n.grad if isinstance(n.grad, torch.Tensor) else torch.tensor(n.grad)
                 a.grad = a.grad + (node_grad * b_val) if isinstance(a.grad, torch.Tensor) else torch.tensor(a.grad) + (node_grad * b_val)
                 b.grad = b.grad + (node_grad * a_val) if isinstance(b.grad, torch.Tensor) else torch.tensor(b.grad) + (node_grad * a_val)
             else:
-                a.grad += float(node.grad) * b_val
-                b.grad += float(node.grad) * a_val
-        elif node.op == "const":
-            pass  # Constants have zero gradient
+                a.grad += float(n.grad) * b_val
+                b.grad += float(n.grad) * a_val
+        elif n.op == "div":
+            # For division, if z = a / b then:
+            # dz/da = 1 / b  and  dz/db = -a / (b^2)
+            a, b = n.inputs
+            a_val = a.value if a.value is not None else evaluate(a)
+            b_val = b.value if b.value is not None else evaluate(b)
+            if isinstance(n.grad, torch.Tensor) or isinstance(a_val, torch.Tensor) or isinstance(b_val, torch.Tensor):
+                if not isinstance(a_val, torch.Tensor):
+                    a_val = torch.tensor(a_val)
+                if not isinstance(b_val, torch.Tensor):
+                    b_val = torch.tensor(b_val)
+                node_grad = n.grad if isinstance(n.grad, torch.Tensor) else torch.tensor(n.grad)
+                a.grad = a.grad + (node_grad / b_val) if isinstance(a.grad, torch.Tensor) else torch.tensor(a.grad) + (node_grad / b_val)
+                b.grad = b.grad + (node_grad * (-a_val / (b_val * b_val))) if isinstance(b.grad, torch.Tensor) else torch.tensor(b.grad) + (node_grad * (-a_val / (b_val * b_val)))
+            else:
+                a.grad += n.grad / b_val
+                b.grad += n.grad * (-a_val / (b_val * b_val))
+        elif n.op == "const":
+            # Constants do not contribute gradients.
+            pass
         else:
-            grad_fn = node.metadata.get("grad_fn", None)
+            grad_fn = n.metadata.get("grad_fn", None)
             if grad_fn:
-                grads = grad_fn(node)
-                for inp, grad in zip(node.inputs, grads):
+                grads = grad_fn(n)
+                for inp, grad in zip(n.inputs, grads):
                     inp.grad += grad
 
 def evaluate(node: Node):

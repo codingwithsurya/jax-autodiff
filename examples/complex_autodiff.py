@@ -41,49 +41,46 @@ def create_visualization(node: Node, filename: str):
 def main():
     # Create input x
     x = constant(2.0)  # Evaluate at x = 2
-    
+
     # First expression: f(x) = x * x + 1
     x_squared = mul(x, x)
     f = add(x_squared, constant(1.0))
-    
+
     # Second expression: g(x) = x * x - 1/(x * x * x)
     x_squared_2 = mul(x, x)
     x_cubed = mul(x, mul(x, x))
     one_over_x_cubed = div(constant(1.0), x_cubed)
     g = add(x_squared_2, mul(constant(-1.0), one_over_x_cubed))
-    
+
     # Final expression: h(x) = f(x) * g(x)
     h = mul(f, g)
-    
-    # Compute gradients
-    compute_gradients(h)
-    
-    # Create visualizations
-    create_visualization(f, 'f_graph')
-    create_visualization(g, 'g_graph')
-    create_visualization(h, 'h_graph')
-    
-    # Print results
+
+    # Compute gradients for f(x) separately
+    x.grad = 0.0
+    compute_gradients(f)
     print(f"Evaluating at x = 2.0:")
-    print(f"f(x) = x * x + 1:")
+    print("f(x) = x * x + 1:")
     print(f"Value: {trace(f)}")
-    print(f"Gradient: {x.grad}")
+    print(f"Gradient: {x.grad}")  # Should be 4.0
     print()
-    
-    # Reset gradients for g(x)
+
+    # Compute gradients for g(x)
     x.grad = 0.0
     compute_gradients(g)
-    print(f"g(x) = x * x - 1/(x * x * x):")
+    print("g(x) = x * x - 1/(x * x * x):")
     print(f"Value: {trace(g)}")
-    print(f"Gradient: {x.grad}")
+    print(f"Gradient: {x.grad}")  # Should be 4.1875
     print()
-    
-    # Reset gradients for h(x)
+
+    # Compute gradients for h(x)
     x.grad = 0.0
     compute_gradients(h)
-    print(f"h(x) = f(x) * g(x):")
+    print("h(x) = f(x) * g(x):")
     print(f"Value: {trace(h)}")
-    print(f"Gradient: {x.grad}")
+    print(f"Gradient: {x.grad}")  # Should be 36.4375
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()

@@ -24,3 +24,9 @@ env/
 *.swp
 *.swo
 .DS_Store
+
+# Graph visualization files
+*.graph
+*.png
+*_graph
+*_graph.png
